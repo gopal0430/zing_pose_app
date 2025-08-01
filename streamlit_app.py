@@ -2,33 +2,33 @@ import streamlit as st
 import cv2
 import numpy as np
 import mediapipe as mp
+from PIL import Image
+import tempfile
 
-st.title("Zing Coach - Real-Time Pose Detection")
+st.title("Zing Coach – Mobile Pose Snapshot")
 
-run = st.checkbox('Start Webcam')
-FRAME_WINDOW = st.image([])
+st.write("📱 Works on mobile too! Use your camera to capture a pose snapshot:")
 
-mp_pose = mp.solutions.pose
-pose = mp_pose.Pose()
-mp_draw = mp.solutions.drawing_utils
+img_file_buffer = st.camera_input("Take a photo")
 
-cap = None
+if img_file_buffer is not None:
+    # Load image with PIL and convert to OpenCV format
+    img = Image.open(img_file_buffer)
+    img_np = np.array(img)
 
-if run:
-    cap = cv2.VideoCapture(0)
+    # Convert RGB to BGR for OpenCV
+    frame = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 
-    while run:
-        ret, frame = cap.read()
-        if not ret:
-            st.write("Failed to capture image")
-            break
+    # MediaPipe setup
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose()
+    mp_draw = mp.solutions.drawing_utils
 
-        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        result = pose.process(img_rgb)
+    # Process pose
+    results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-        if result.pose_landmarks:
-            mp_draw.draw_landmarks(frame, result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
-        FRAME_WINDOW.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-
-    cap.release()
+    if results.pose_landmarks:
+        mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+        st.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), caption="Pose Landmarks", use_column_width=True)
+    else:
+        st.warning("⚠️ No pose detected. Try retaking the photo.")
